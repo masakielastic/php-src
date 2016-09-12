@@ -5386,18 +5386,12 @@ PHP_FUNCTION(mb_codepoint_at)
 	size_t str_len, enc_len, ret_len;
 	zend_long index, cp;
 
-#ifndef FAST_ZPP
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sl|s", &str, &str_len, &index, &enc, &enc_len) == FAILURE) {
-		return;
-	}
-#else
 	ZEND_PARSE_PARAMETERS_START(2, 3)
 		Z_PARAM_STRING(str, str_len)
 		Z_PARAM_LONG(index)
 		Z_PARAM_OPTIONAL
 		Z_PARAM_STRING(enc, enc_len)
 	ZEND_PARSE_PARAMETERS_END();
-#endif
 
 	ret = php_mb_substr(str, str_len, index, 1, (char*) enc, &ret_len);
 	cp = php_mb_ord(ret, ret_len, enc);
