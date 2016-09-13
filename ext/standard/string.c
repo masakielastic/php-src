@@ -5658,9 +5658,8 @@ PHP_FUNCTION(substr_compare)
 PHP_FUNCTION(str_at)
 {
 
-  char* str;
-  char* enc = NULL;
-  size_t str_len, enc_len;
+  zend_string *str;
+  zend_string *enc = NULL;
   zend_long offset;
   enum entity_charset charset;
 
@@ -5671,26 +5670,31 @@ PHP_FUNCTION(str_at)
   int status = 0;
 
   ZEND_PARSE_PARAMETERS_START(2, 3)
-    Z_PARAM_STRING(str, str_len)
+    Z_PARAM_STR(str)
     Z_PARAM_LONG(offset)
     Z_PARAM_OPTIONAL
-    Z_PARAM_STRING(enc, enc_len)
+    Z_PARAM_STR(enc)
   ZEND_PARSE_PARAMETERS_END();
 
   if (offset < 0) {
     RETURN_NULL();
   }
 
-  charset = determine_charset(enc);
+  if (enc == NULL) {
+    charset = determine_charset(NULL);
+  } else {
+    charset = determine_charset(enc->val);
+  }
 
-  while (current < str_len) {
+
+  while (current < str->len) {
     previous = current;
     cp = get_next_char(
-      charset, (const unsigned char*) str, str_len, &current, &status
+      charset, (const unsigned char*) str->val, str->len, &current, &status
     );
 
     if (i == offset) {
-      RETURN_STRINGL(str + previous, current - previous);
+      RETURN_STRINGL(str->val + previous, current - previous);
     }
 
     i++;
