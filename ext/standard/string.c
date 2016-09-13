@@ -5805,7 +5805,7 @@ PHP_FUNCTION(str_codepoint_at)
   ret = php_str_at(str, offset, enc);
 
   if (ret == NULL) {
-    RETURN_NULL();
+    RETURN_FALSE;
   }
 
   cp = php_ord(ret, enc);
