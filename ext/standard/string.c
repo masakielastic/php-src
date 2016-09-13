@@ -5759,6 +5759,62 @@ PHP_FUNCTION(str_at)
 }
 /* }}} */
 
+static zend_long php_ord(zend_string *str, zend_string *enc)
+{
+  enum entity_charset charset;
+  unsigned int cp;
+  size_t current = 0;
+  int status = 0;
+
+  if (enc == NULL) {
+    charset = determine_charset(NULL);
+  } else {
+    charset = determine_charset(enc->val);
+  }
+
+  cp = get_next_char(
+    charset, (const unsigned char*) str->val, str->len, &current, &status
+  );
+
+  if (status == FAILURE) {
+    if (charset == cs_utf_8) {
+      cp = 0xfffd;
+    } else {
+      cp = 0x3f;
+    }
+  }
+
+  return cp;
+}
+
+/* {{{ proto string str_codepoint_at([string str, int offset[, string encoding]]) */
+PHP_FUNCTION(str_codepoint_at)
+{
+
+  zend_string *str, *enc = NULL, *ret;
+  zend_long offset;
+  zend_long cp;
+
+  ZEND_PARSE_PARAMETERS_START(2, 3)
+    Z_PARAM_STR(str)
+    Z_PARAM_LONG(offset)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(enc)
+  ZEND_PARSE_PARAMETERS_END();
+
+  ret = php_str_at(str, offset, enc);
+
+  if (ret == NULL) {
+    RETURN_NULL();
+  }
+
+  cp = php_ord(ret, enc);
+  zend_string_release(ret);
+
+  RETVAL_LONG(cp);
+}
+/* }}} */
+
 /*
  * Local variables:
  * tab-width: 4

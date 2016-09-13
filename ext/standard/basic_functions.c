@@ -2471,6 +2471,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_str_at, 0, 0, 2)
 	ZEND_ARG_INFO(0, offset)
 	ZEND_ARG_INFO(0, encoding)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_str_codepoint_at, 0, 0, 2)
+	ZEND_ARG_INFO(0, str)
+	ZEND_ARG_INFO(0, offset)
+	ZEND_ARG_INFO(0, encoding)
+ZEND_END_ARG_INFO()
 /* }}} */
 /* {{{ syslog.c */
 #ifdef HAVE_SYSLOG_H
@@ -2771,6 +2777,7 @@ const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(strpbrk,															arginfo_strpbrk)
 	PHP_FE(substr_compare,													arginfo_substr_compare)
 	PHP_FE(str_at,													arginfo_str_at)
+	PHP_FE(str_codepoint_at,													arginfo_str_codepoint_at)
 #ifdef HAVE_STRCOLL
 	PHP_FE(strcoll,															arginfo_strcoll)
 #endif
