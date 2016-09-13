@@ -2466,7 +2466,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_substr_compare, 0, 0, 3)
 	ZEND_ARG_INFO(0, case_sensitivity)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_str_at, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_str_at, 0, 0, 2)
 	ZEND_ARG_INFO(0, str)
 	ZEND_ARG_INFO(0, offset)
 	ZEND_ARG_INFO(0, encoding)
