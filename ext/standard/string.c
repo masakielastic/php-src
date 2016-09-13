@@ -5654,10 +5654,38 @@ PHP_FUNCTION(substr_compare)
 }
 /* }}} */
 
+static zend_long php_strlen(zend_string *str, zend_string *enc)
+{
+  enum entity_charset charset;
+  zend_long len = 0;
+  unsigned int cp;
+  size_t previous = 0;
+  size_t current = 0;
+  int status = 0;
+
+  if (enc == NULL) {
+    charset = determine_charset(NULL);
+  } else {
+    charset = determine_charset(enc->val);
+  }
+
+  while (current < str->len) {
+    previous = current;
+    cp = get_next_char(
+      charset, (const unsigned char*) str->val, str->len, &current, &status
+    );
+
+    len++;
+  }
+
+  return len;
+}
+
 static zend_string* php_str_at(zend_string *str, zend_long offset, zend_string *enc)
 {
   enum entity_charset charset;
   zend_string *ret;
+  zend_long len;
 
   zend_long i = 0;
   unsigned int cp;
@@ -5665,9 +5693,24 @@ static zend_string* php_str_at(zend_string *str, zend_long offset, zend_string *
   size_t current = 0;
   int status = 0;
 
-  if (offset < 0) {
+  len = php_strlen(str, enc);
+
+  if (len < offset) {
     return NULL;
-  }
+  } else if (offset < 0 && (size_t)-offset > len) {
+		offset = 0;
+	}
+
+  if ((1 + len - offset) < 0) {
+    return NULL;
+	}
+
+	if (offset < 0) {
+		offset = len + offset;
+		if (offset < 0) {
+			offset = 0;
+		}
+	}
 
   if (enc == NULL) {
     charset = determine_charset(NULL);
