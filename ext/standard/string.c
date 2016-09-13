@@ -5654,14 +5654,10 @@ PHP_FUNCTION(substr_compare)
 }
 /* }}} */
 
-/* {{{ proto string str_at([string str, int offset[, string encoding]]) */
-PHP_FUNCTION(str_at)
+static zend_string* php_str_at(zend_string *str, zend_long offset, zend_string *enc)
 {
-
-  zend_string *str;
-  zend_string *enc = NULL;
-  zend_long offset;
   enum entity_charset charset;
+  zend_string *ret;
 
   zend_long i = 0;
   unsigned int cp;
@@ -5669,15 +5665,8 @@ PHP_FUNCTION(str_at)
   size_t current = 0;
   int status = 0;
 
-  ZEND_PARSE_PARAMETERS_START(2, 3)
-    Z_PARAM_STR(str)
-    Z_PARAM_LONG(offset)
-    Z_PARAM_OPTIONAL
-    Z_PARAM_STR(enc)
-  ZEND_PARSE_PARAMETERS_END();
-
   if (offset < 0) {
-    RETURN_NULL();
+    return NULL;
   }
 
   if (enc == NULL) {
@@ -5686,7 +5675,6 @@ PHP_FUNCTION(str_at)
     charset = determine_charset(enc->val);
   }
 
-
   while (current < str->len) {
     previous = current;
     cp = get_next_char(
@@ -5694,13 +5682,37 @@ PHP_FUNCTION(str_at)
     );
 
     if (i == offset) {
-      RETURN_STRINGL(str->val + previous, current - previous);
+      ret = zend_string_init(str->val + previous, current - previous, 0);
+      return ret;
     }
 
     i++;
   }
 
-  RETURN_NULL();
+  return NULL;
+}
+
+/* {{{ proto string str_at([string str, int offset[, string encoding]]) */
+PHP_FUNCTION(str_at)
+{
+
+  zend_string *str, *enc = NULL, *ret;
+  zend_long offset;
+
+  ZEND_PARSE_PARAMETERS_START(2, 3)
+    Z_PARAM_STR(str)
+    Z_PARAM_LONG(offset)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(enc)
+  ZEND_PARSE_PARAMETERS_END();
+
+  ret = php_str_at(str, offset, enc);
+
+  if (ret == NULL) {
+    RETURN_NULL();
+  }
+
+  RETVAL_STR(ret);
 }
 /* }}} */
 
