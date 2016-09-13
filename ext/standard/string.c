@@ -5752,7 +5752,7 @@ PHP_FUNCTION(str_at)
   ret = php_str_at(str, offset, enc);
 
   if (ret == NULL) {
-    RETURN_NULL();
+    RETURN_FALSE;
   }
 
   RETVAL_STR(ret);
