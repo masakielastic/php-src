@@ -305,6 +305,7 @@ PHP_MINIT_FUNCTION(basic) /* {{{ */
 	BASIC_MINIT_SUBMODULE(user_filters)
 	BASIC_MINIT_SUBMODULE(password)
 	BASIC_MINIT_SUBMODULE(image)
+    BASIC_MINIT_SUBMODULE(str_iter)
 
 #ifdef ZTS
 	BASIC_MINIT_SUBMODULE(localeconv)

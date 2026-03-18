@@ -1,8 +1,9 @@
 --TEST--
-str_iter() exists
+str_iter() returns an object
 --FILE--
 <?php
-var_dump(function_exists('str_iter'));
+$it = str_iter("abc");
+var_dump(is_object($it));
 ?>
 --EXPECT--
 bool(true)
