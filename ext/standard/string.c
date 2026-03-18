@@ -6258,20 +6258,6 @@ PHP_FUNCTION(substr_compare)
 
 
 /* {{{ */
-PHP_FUNCTION(str_iter)
-{
-    zend_string *string;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_STR(string)
-    ZEND_PARSE_PARAMETERS_END();
-
-    RETURN_THROWS();
-}
-
-/* }}} */
-
-/* {{{ */
 static zend_string *php_utf8_encode(const char *s, size_t len)
 {
 	size_t pos = len;
