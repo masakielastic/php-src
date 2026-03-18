@@ -2630,6 +2630,9 @@ function strpbrk(string $string, string $characters): string|false {}
  */
 function substr_compare(string $haystack, string $needle, int $offset, ?int $length = null, bool $case_insensitive = false): int {}
 
+
+function str_iter(string $string): Traversable {}
+
 /**
  * @compile-time-eval
  * @refcount 1

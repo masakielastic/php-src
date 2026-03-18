@@ -1,5 +1,5 @@
 /* This is a generated file, edit basic_functions.stub.php instead.
- * Stub hash: f5583557f058e4862750d1262296d7f59cb0eed0
+ * Stub hash: 909d4bf7843d9b03fc002db3c8de54b3879dcbd2
  * Has decl header: yes */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_set_time_limit, 0, 1, _IS_BOOL, 0)
@@ -1096,6 +1096,10 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_substr_compare, 0, 3, IS_LONG, 0
 	ZEND_ARG_TYPE_INFO(0, offset, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "null")
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, case_insensitive, _IS_BOOL, 0, "false")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_str_iter, 0, 1, Traversable, 0)
+	ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
 #define arginfo_utf8_encode arginfo_base64_encode
@@ -2599,6 +2603,7 @@ ZEND_FUNCTION(str_word_count);
 ZEND_FUNCTION(str_split);
 ZEND_FUNCTION(strpbrk);
 ZEND_FUNCTION(substr_compare);
+ZEND_FUNCTION(str_iter);
 ZEND_FUNCTION(utf8_encode);
 ZEND_FUNCTION(utf8_decode);
 ZEND_FUNCTION(opendir);
@@ -3201,6 +3206,7 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY("str_split", zif_str_split, arginfo_str_split, ZEND_ACC_COMPILE_TIME_EVAL, NULL, NULL)
 	ZEND_RAW_FENTRY("strpbrk", zif_strpbrk, arginfo_strpbrk, ZEND_ACC_COMPILE_TIME_EVAL, NULL, NULL)
 	ZEND_RAW_FENTRY("substr_compare", zif_substr_compare, arginfo_substr_compare, ZEND_ACC_COMPILE_TIME_EVAL, NULL, NULL)
+	ZEND_FE(str_iter, arginfo_str_iter)
 	ZEND_RAW_FENTRY("utf8_encode", zif_utf8_encode, arginfo_utf8_encode, ZEND_ACC_DEPRECATED|ZEND_ACC_COMPILE_TIME_EVAL, NULL, NULL)
 	ZEND_RAW_FENTRY("utf8_decode", zif_utf8_decode, arginfo_utf8_decode, ZEND_ACC_DEPRECATED|ZEND_ACC_COMPILE_TIME_EVAL, NULL, NULL)
 	ZEND_FE(opendir, arginfo_opendir)
