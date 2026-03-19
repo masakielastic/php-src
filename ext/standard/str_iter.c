@@ -31,17 +31,21 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_str_iter_valid, 0, 0, _IS_BOOL, 
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_str_iter_rewind, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
-    
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_str_iter_key, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(InternalStrIterator, current);
 PHP_METHOD(InternalStrIterator, next);
 PHP_METHOD(InternalStrIterator, valid);
 PHP_METHOD(InternalStrIterator, rewind);
+PHP_METHOD(InternalStrIterator, key);
 
 static const zend_function_entry php_str_iter_class_methods[] = {
     ZEND_ME(InternalStrIterator, current, arginfo_str_iter_current, ZEND_ACC_PUBLIC)
     ZEND_ME(InternalStrIterator, next, arginfo_str_iter_next, ZEND_ACC_PUBLIC)
     ZEND_ME(InternalStrIterator, valid, arginfo_str_iter_valid, ZEND_ACC_PUBLIC)
     ZEND_ME(InternalStrIterator, rewind, arginfo_str_iter_rewind, ZEND_ACC_PUBLIC)
+    ZEND_ME(InternalStrIterator, key, arginfo_str_iter_key, ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 
@@ -286,4 +290,14 @@ PHP_METHOD(InternalStrIterator, rewind)
 
     intern = Z_STR_ITER_OBJ_P(ZEND_THIS);
     php_str_iter_reset(intern);
+}
+
+PHP_METHOD(InternalStrIterator, key)
+{
+    php_str_iter_object *intern;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    intern = Z_STR_ITER_OBJ_P(ZEND_THIS);
+    RETURN_LONG(intern->index);
 }
