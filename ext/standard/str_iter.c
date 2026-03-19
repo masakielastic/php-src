@@ -9,19 +9,40 @@ typedef struct _php_str_iter_object {
     zend_long index;
 } php_str_iter_object;
 
+typedef struct _php_str_iter_iterator {
+    zend_object_iterator intern;
+    zval current;
+} php_str_iter_iterator;
+
 static zend_class_entry *php_str_iter_ce;
 static zend_object_handlers php_str_iter_object_handlers;
 
+static zend_object *php_str_iter_create_object(zend_class_entry *ce);
+static void php_str_iter_free_object(zend_object *object);
+
+#define Z_STR_ITER_OBJ_P(zv) php_str_iter_from_obj(Z_OBJ_P((zv)))
+//static void php_str_iter_iterator_dtor(zend_object_iterator *iter);
+//static zend_result php_str_iter_iterator_valid(zend_object_iterator *iter);
+//static zval *php_str_iter_iterator_get_current_data(zend_object_iterator *iter);
+//static void php_str_iter_iterator_get_current_key(zend_object_iterator *iter, zval *key);
+//static void php_str_iter_iterator_move_forward(zend_object_iterator *iter)
+//static void php_str_iter_iterator_rewind(zend_object_iterator *iter);
+static zend_object_iterator *php_str_iter_get_iterator(
+    zend_class_entry *ce,
+    zval *object,
+    int by_ref
+);
 
 static inline php_str_iter_object *php_str_iter_from_obj(zend_object *obj)
 {
     return (php_str_iter_object *)((char *)(obj) - XtOffsetOf(php_str_iter_object, std));
 }
 
-#define Z_STR_ITER_OBJ_P(zv) php_str_iter_from_obj(Z_OBJ_P((zv)))
-
-static zend_object *php_str_iter_create_object(zend_class_entry *ce);
-static void php_str_iter_free_object(zend_object *object);
+static php_str_iter_object *php_str_iter_iterator_get_object(zend_object_iterator *iter)
+{
+    zval *object = &iter->data;
+    return Z_STR_ITER_OBJ_P(object);
+}
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_str_iter_current, 0, 0, IS_STRING, 1)
 ZEND_END_ARG_INFO()
@@ -49,6 +70,8 @@ static const zend_function_entry php_str_iter_class_methods[] = {
     ZEND_FE_END
 };
 
+
+
 PHP_MINIT_FUNCTION(str_iter)
 {
     zend_class_entry ce;
@@ -56,7 +79,9 @@ PHP_MINIT_FUNCTION(str_iter)
     INIT_CLASS_ENTRY(ce, "InternalStrIterator", php_str_iter_class_methods);
     php_str_iter_ce = zend_register_internal_class(&ce);
     php_str_iter_ce->create_object = php_str_iter_create_object;
-
+    php_str_iter_ce->get_iterator = php_str_iter_get_iterator;
+    php_str_iter_ce->ce_flags |= ZEND_ACC_GENERATOR;
+    
     memcpy(&php_str_iter_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
     php_str_iter_object_handlers.offset = XtOffsetOf(php_str_iter_object, std);
     php_str_iter_object_handlers.free_obj = php_str_iter_free_object;
@@ -200,6 +225,94 @@ static zend_string *php_str_iter_current(php_str_iter_object *intern)
         char_len,
         0
     );
+}
+
+static void php_str_iter_iterator_dtor(zend_object_iterator *iter)
+{
+    php_str_iter_iterator *iterator = (php_str_iter_iterator *) iter;
+
+    zval_ptr_dtor(&iterator->intern.data);
+    zval_ptr_dtor(&iterator->current);
+}
+
+static zend_result php_str_iter_iterator_valid(zend_object_iterator *iter)
+{
+    php_str_iter_object *intern = php_str_iter_iterator_get_object(iter);
+
+    return php_str_iter_valid(intern) ? SUCCESS : FAILURE;
+}
+
+static zval *php_str_iter_iterator_get_current_data(zend_object_iterator *iter)
+{
+    php_str_iter_iterator *iterator = (php_str_iter_iterator *) iter;
+    php_str_iter_object *intern = php_str_iter_iterator_get_object(iter);
+    zend_string *current;
+
+    zval_ptr_dtor(&iterator->current);
+    ZVAL_UNDEF(&iterator->current);
+
+    current = php_str_iter_current(intern);
+    if (current == NULL) {
+        return NULL;
+    }
+
+    ZVAL_STR(&iterator->current, current);
+    return &iterator->current;
+}
+
+static void php_str_iter_iterator_get_current_key(zend_object_iterator *iter, zval *key)
+{
+    php_str_iter_object *intern = php_str_iter_iterator_get_object(iter);
+
+    ZVAL_LONG(key, intern->index);
+}
+
+static void php_str_iter_iterator_move_forward(zend_object_iterator *iter)
+{
+    php_str_iter_object *intern = php_str_iter_iterator_get_object(iter);
+
+    php_str_iter_move_forward(intern);
+}
+
+static void php_str_iter_iterator_rewind(zend_object_iterator *iter)
+{
+    php_str_iter_object *intern = php_str_iter_iterator_get_object(iter);
+
+    php_str_iter_reset(intern);
+}
+
+static const zend_object_iterator_funcs php_str_iter_iterator_funcs = {
+    php_str_iter_iterator_dtor,
+    php_str_iter_iterator_valid,
+    php_str_iter_iterator_get_current_data,
+    php_str_iter_iterator_get_current_key,
+    php_str_iter_iterator_move_forward,
+    php_str_iter_iterator_rewind,
+    NULL,
+    NULL
+};
+
+static zend_object_iterator *php_str_iter_get_iterator(
+    zend_class_entry *ce,
+    zval *object,
+    int by_ref
+) {
+    php_str_iter_iterator *iterator;
+
+    if (by_ref) {
+        zend_throw_error(NULL, "An iterator cannot be used with foreach by reference");
+        return NULL;
+    }
+
+    iterator = emalloc(sizeof(php_str_iter_iterator));
+    zend_iterator_init(&iterator->intern);
+
+    ZVAL_COPY(&iterator->intern.data, object);
+    ZVAL_UNDEF(&iterator->current);
+
+    iterator->intern.funcs = &php_str_iter_iterator_funcs;
+
+    return &iterator->intern;
 }
 
 PHP_FUNCTION(str_iter_debug_first)
