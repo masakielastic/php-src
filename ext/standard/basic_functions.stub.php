@@ -2633,6 +2633,9 @@ function substr_compare(string $haystack, string $needle, int $offset, ?int $len
 
 function str_iter(string $string): Traversable {}
 
+function str_iter_debug_first(InternalStrIterator $iterator): ?string {}
+
+function str_iter_debug_next(InternalStrIterator $iterator): ?string {}
 /**
  * @compile-time-eval
  * @refcount 1

@@ -5,6 +5,8 @@
 typedef struct _php_str_iter_object {
     zend_object std;
     zend_string *str;
+    size_t offset;
+    zend_long index;
 } php_str_iter_object;
 
 static zend_class_entry *php_str_iter_ce;
@@ -49,6 +51,8 @@ PHP_FUNCTION(str_iter)
 
     intern = Z_STR_ITER_OBJ_P(&obj);
     intern->str = zend_string_copy(string);
+    intern->offset = 0;
+    intern->index = 0;
 
     RETURN_ZVAL(&obj, 0, 1);
 }
@@ -59,6 +63,8 @@ static zend_object *php_str_iter_create_object(zend_class_entry *ce)
 
     intern = zend_object_alloc(sizeof(php_str_iter_object), ce);
     intern->str = NULL;
+    intern->offset = 0;
+    intern->index = 0;
 
     zend_object_std_init(&intern->std, ce);
     object_properties_init(&intern->std, ce);
@@ -77,4 +83,137 @@ static void php_str_iter_free_object(zend_object *object)
     }
 
     zend_object_std_dtor(&intern->std);
+}
+
+static size_t php_str_iter_utf8_char_len(const unsigned char *p, size_t remaining)
+{
+    if (remaining == 0) {
+        return 0;
+    }
+
+    if (p[0] < 0x80) {
+        return 1;
+    }
+
+    if ((p[0] & 0xE0) == 0xC0) {
+        return remaining >= 2 ? 2 : 1;
+    }
+
+    if ((p[0] & 0xF0) == 0xE0) {
+        return remaining >= 3 ? 3 : 1;
+    }
+
+    if ((p[0] & 0xF8) == 0xF0) {
+        return remaining >= 4 ? 4 : 1;
+    }
+
+    return 1;
+}
+
+static void php_str_iter_reset(php_str_iter_object *intern)
+{
+    intern->offset = 0;
+    intern->index = 0;
+}
+
+static zend_bool php_str_iter_valid(php_str_iter_object *intern)
+{
+    if (intern->str == NULL) {
+        return 0;
+    }
+
+    return intern->offset < ZSTR_LEN(intern->str);
+}
+
+
+static void php_str_iter_move_forward(php_str_iter_object *intern)
+{
+    const unsigned char *buf;
+    size_t len;
+    size_t char_len;
+
+    if (intern->str == NULL) {
+        return;
+    }
+
+    len = ZSTR_LEN(intern->str);
+
+    if (intern->offset >= len) {
+        return;
+    }
+
+    buf = (const unsigned char *) ZSTR_VAL(intern->str);
+    char_len = php_str_iter_utf8_char_len(buf + intern->offset, len - intern->offset);
+
+    intern->offset += char_len;
+    intern->index++;
+}
+
+static zend_string *php_str_iter_current(php_str_iter_object *intern)
+{
+    const unsigned char *buf;
+    size_t len;
+    size_t char_len;
+
+    if (intern->str == NULL) {
+        return NULL;
+    }
+
+    len = ZSTR_LEN(intern->str);
+
+    if (intern->offset >= len) {
+        return NULL;
+    }
+
+    buf = (const unsigned char *) ZSTR_VAL(intern->str);
+    char_len = php_str_iter_utf8_char_len(buf + intern->offset, len - intern->offset);
+
+    return zend_string_init(
+        ZSTR_VAL(intern->str) + intern->offset,
+        char_len,
+        0
+    );
+}
+
+PHP_FUNCTION(str_iter_debug_first)
+{
+    zval *obj;
+    php_str_iter_object *intern;
+    zend_string *current;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_OBJECT_OF_CLASS(obj, php_str_iter_ce)
+    ZEND_PARSE_PARAMETERS_END();
+
+    intern = Z_STR_ITER_OBJ_P(obj);
+    php_str_iter_reset(intern);
+
+    current = php_str_iter_current(intern);
+    if (current == NULL) {
+        RETURN_NULL();
+    }
+
+    RETVAL_STR(current);
+}
+
+
+PHP_FUNCTION(str_iter_debug_next)
+{
+    zval *obj;
+    php_str_iter_object *intern;
+    zend_string *current;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_OBJECT_OF_CLASS(obj, php_str_iter_ce)
+    ZEND_PARSE_PARAMETERS_END();
+
+    intern = Z_STR_ITER_OBJ_P(obj);
+    php_str_iter_move_forward(intern);
+
+    current = php_str_iter_current(intern);
+    if (current == NULL) {
+        RETURN_NULL();
+    }
+
+    RETVAL_STR(current);
 }
