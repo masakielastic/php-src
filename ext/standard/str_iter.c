@@ -12,6 +12,7 @@ typedef struct _php_str_iter_object {
 static zend_class_entry *php_str_iter_ce;
 static zend_object_handlers php_str_iter_object_handlers;
 
+
 static inline php_str_iter_object *php_str_iter_from_obj(zend_object *obj)
 {
     return (php_str_iter_object *)((char *)(obj) - XtOffsetOf(php_str_iter_object, std));
@@ -22,11 +23,21 @@ static inline php_str_iter_object *php_str_iter_from_obj(zend_object *obj)
 static zend_object *php_str_iter_create_object(zend_class_entry *ce);
 static void php_str_iter_free_object(zend_object *object);
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_str_iter_current, 0, 0, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(InternalStrIterator, current);
+
+static const zend_function_entry php_str_iter_class_methods[] = {
+    ZEND_ME(InternalStrIterator, current, arginfo_str_iter_current, ZEND_ACC_PUBLIC)
+    ZEND_FE_END
+};
+
 PHP_MINIT_FUNCTION(str_iter)
 {
     zend_class_entry ce;
 
-    INIT_CLASS_ENTRY(ce, "InternalStrIterator", NULL);
+    INIT_CLASS_ENTRY(ce, "InternalStrIterator", php_str_iter_class_methods);
     php_str_iter_ce = zend_register_internal_class(&ce);
     php_str_iter_ce->create_object = php_str_iter_create_object;
 
@@ -216,4 +227,21 @@ PHP_FUNCTION(str_iter_debug_next)
     }
 
     RETVAL_STR(current);
+}
+
+PHP_METHOD(InternalStrIterator, current)
+{
+    php_str_iter_object *intern;
+    zend_string *current;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    intern = Z_STR_ITER_OBJ_P(ZEND_THIS);
+
+    current = php_str_iter_current(intern);
+    if (current == NULL) {
+        RETURN_NULL();
+    }
+
+    RETURN_STR(current);
 }
