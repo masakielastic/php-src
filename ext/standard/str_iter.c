@@ -4,10 +4,10 @@
 #include "ext/standard/php_string.h"
 
 typedef struct _php_str_iter_object {
-    zend_object std;
     zend_string *str;
     size_t offset;
     zend_long index;
+    zend_object std;
 } php_str_iter_object;
 
 static zend_class_entry *php_str_iter_ce;
