@@ -1,4 +1,5 @@
 #include "php.h"
+#include "Zend/zend_interfaces.h"
 #include "ext/standard/basic_functions.h"
 #include "ext/standard/php_string.h"
 
@@ -80,8 +81,9 @@ PHP_MINIT_FUNCTION(str_iter)
     php_str_iter_ce = zend_register_internal_class(&ce);
     php_str_iter_ce->create_object = php_str_iter_create_object;
     php_str_iter_ce->get_iterator = php_str_iter_get_iterator;
-    php_str_iter_ce->ce_flags |= ZEND_ACC_GENERATOR;
-    
+
+    zend_class_implements(php_str_iter_ce, 1, zend_ce_iterator);
+
     memcpy(&php_str_iter_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
     php_str_iter_object_handlers.offset = XtOffsetOf(php_str_iter_object, std);
     php_str_iter_object_handlers.free_obj = php_str_iter_free_object;
