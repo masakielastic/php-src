@@ -14,6 +14,7 @@ static zend_class_entry *php_str_iter_ce;
 static zend_object_handlers php_str_iter_object_handlers;
 
 static zend_object *php_str_iter_create_object(zend_class_entry *ce);
+static zend_function *php_str_iter_get_constructor(zend_object *object);
 static void php_str_iter_free_object(zend_object *object);
 
 #define Z_STR_ITER_OBJ_P(zv) php_str_iter_from_obj(Z_OBJ_P((zv)))
@@ -64,6 +65,7 @@ PHP_MINIT_FUNCTION(str_iter)
     memcpy(&php_str_iter_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
     php_str_iter_object_handlers.offset = XtOffsetOf(php_str_iter_object, std);
     php_str_iter_object_handlers.free_obj = php_str_iter_free_object;
+    php_str_iter_object_handlers.get_constructor = php_str_iter_get_constructor;
 
     return SUCCESS;
 }
@@ -103,6 +105,12 @@ static zend_object *php_str_iter_create_object(zend_class_entry *ce)
     intern->std.handlers = &php_str_iter_object_handlers;
 
     return &intern->std;
+}
+
+static zend_function *php_str_iter_get_constructor(zend_object *object)
+{
+    zend_throw_error(NULL, "Cannot directly construct InternalStrIterator, use str_iter() instead");
+    return NULL;
 }
 
 static void php_str_iter_free_object(zend_object *object)
