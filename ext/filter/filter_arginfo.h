@@ -1,5 +1,5 @@
 /* This is a generated file, edit filter.stub.php instead.
- * Stub hash: c3eb55dfec619af1e46be206f51a2b0893ed399f */
+ * Stub hash: 417e6005b0d89d1d526a844ff7fa5caea32b970d */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_filter_has_var, 0, 2, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, input_type, IS_LONG, 0)
@@ -31,6 +31,10 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_filter_var_array, 0, 1, MAY_BE_A
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, add_empty, _IS_BOOL, 0, "true")
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_filter_descriptors, 0, 1, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, spec, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_filter_list, 0, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -43,6 +47,7 @@ ZEND_FUNCTION(filter_input);
 ZEND_FUNCTION(filter_var);
 ZEND_FUNCTION(filter_input_array);
 ZEND_FUNCTION(filter_var_array);
+ZEND_FUNCTION(filter_descriptors);
 ZEND_FUNCTION(filter_list);
 ZEND_FUNCTION(filter_id);
 
@@ -52,6 +57,7 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_FE(filter_var, arginfo_filter_var)
 	ZEND_FE(filter_input_array, arginfo_filter_input_array)
 	ZEND_FE(filter_var_array, arginfo_filter_var_array)
+	ZEND_FE(filter_descriptors, arginfo_filter_descriptors)
 	ZEND_FE(filter_list, arginfo_filter_list)
 	ZEND_FE(filter_id, arginfo_filter_id)
 	ZEND_FE_END

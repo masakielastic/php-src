@@ -67,6 +67,47 @@ static const filter_list_entry filter_list[] = {
 };
 /* }}} */
 
+typedef struct filter_descriptor_name_entry {
+	const char *name;
+	zend_long filter;
+} filter_descriptor_name_entry;
+
+static const filter_descriptor_name_entry filter_descriptor_validate_names[] = {
+	{ "email", FILTER_VALIDATE_EMAIL },
+	{ "int", FILTER_VALIDATE_INT },
+	{ "float", FILTER_VALIDATE_FLOAT },
+	{ "bool", FILTER_VALIDATE_BOOL },
+	{ "boolean", FILTER_VALIDATE_BOOL },
+	{ "url", FILTER_VALIDATE_URL },
+	{ "ip", FILTER_VALIDATE_IP },
+	{ "domain", FILTER_VALIDATE_DOMAIN },
+	{ "mac", FILTER_VALIDATE_MAC },
+	{ "regexp", FILTER_VALIDATE_REGEXP },
+};
+
+static const filter_descriptor_name_entry filter_descriptor_sanitize_names[] = {
+	{ "email", FILTER_SANITIZE_EMAIL },
+	{ "url", FILTER_SANITIZE_URL },
+	{ "encoded", FILTER_SANITIZE_ENCODED },
+	{ "special_chars", FILTER_SANITIZE_SPECIAL_CHARS },
+	{ "full_special_chars", FILTER_SANITIZE_FULL_SPECIAL_CHARS },
+	{ "number_int", FILTER_SANITIZE_NUMBER_INT },
+	{ "number_float", FILTER_SANITIZE_NUMBER_FLOAT },
+	{ "add_slashes", FILTER_SANITIZE_ADD_SLASHES },
+};
+
+static bool php_filter_descriptor_name_to_filter(zend_string *name, const filter_descriptor_name_entry *entries, size_t entry_count, zend_long *filter)
+{
+	for (size_t i = 0; i < entry_count; i++) {
+		if (zend_string_equals_cstr(name, entries[i].name, strlen(entries[i].name))) {
+			*filter = entries[i].filter;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 #ifndef PARSE_ENV
 #define PARSE_ENV 4
 #endif
@@ -817,6 +858,163 @@ PHP_FUNCTION(filter_var_array)
 	}
 
 	php_filter_array_handler(array_input, op_ht, op_long, return_value, add_empty);
+}
+/* }}} */
+
+/* {{{ Builds filter_var_array() runtime descriptors from application-level filter specifications. */
+PHP_FUNCTION(filter_descriptors)
+{
+	zval *spec;
+	zend_string *field_name;
+	zend_ulong field_index;
+	zval *field_spec;
+
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_ARRAY(spec)
+	ZEND_PARSE_PARAMETERS_END();
+
+	array_init_size(return_value, zend_hash_num_elements(Z_ARRVAL_P(spec)));
+
+	ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(spec), field_index, field_name, field_spec) {
+		HashTable *field_spec_ht;
+		zval *validate, *sanitize, *callback, *options, *flags;
+		zend_long filter;
+		uint32_t filter_count;
+		zval descriptor;
+		zend_string *key;
+
+		if (Z_TYPE_P(field_spec) != IS_ARRAY) {
+			if (field_name) {
+				zend_value_error("filter_descriptors(): Field \"%s\" must be an array", ZSTR_VAL(field_name));
+			} else {
+				zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " must be an array", field_index);
+			}
+			RETURN_THROWS();
+		}
+
+		field_spec_ht = Z_ARRVAL_P(field_spec);
+		if (zend_hash_str_exists(field_spec_ht, "filter", sizeof("filter") - 1)) {
+			if (field_name) {
+				zend_value_error("filter_descriptors(): Field \"%s\" must not contain the \"filter\" key", ZSTR_VAL(field_name));
+			} else {
+				zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " must not contain the \"filter\" key", field_index);
+			}
+			RETURN_THROWS();
+		}
+
+		validate = zend_hash_str_find(field_spec_ht, "validate", sizeof("validate") - 1);
+		sanitize = zend_hash_str_find(field_spec_ht, "sanitize", sizeof("sanitize") - 1);
+		callback = zend_hash_str_find(field_spec_ht, "callback", sizeof("callback") - 1);
+		filter_count = (validate != NULL) + (sanitize != NULL) + (callback != NULL);
+		if (filter_count != 1) {
+			if (field_name) {
+				zend_value_error("filter_descriptors(): Field \"%s\" must contain exactly one of \"validate\", \"sanitize\", or \"callback\"", ZSTR_VAL(field_name));
+			} else {
+				zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " must contain exactly one of \"validate\", \"sanitize\", or \"callback\"", field_index);
+			}
+			RETURN_THROWS();
+		}
+
+		ZEND_HASH_FOREACH_STR_KEY(field_spec_ht, key) {
+			if (!key || (!zend_string_equals_literal(key, "validate") && !zend_string_equals_literal(key, "sanitize") && !zend_string_equals_literal(key, "callback") && !zend_string_equals_literal(key, "options") && !zend_string_equals_literal(key, "flags"))) {
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" contains an unknown key", ZSTR_VAL(field_name));
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " contains an unknown key", field_index);
+				}
+				RETURN_THROWS();
+			}
+		} ZEND_HASH_FOREACH_END();
+
+		options = zend_hash_str_find(field_spec_ht, "options", sizeof("options") - 1);
+		flags = zend_hash_str_find(field_spec_ht, "flags", sizeof("flags") - 1);
+		array_init(&descriptor);
+
+		if (callback) {
+			zend_fcall_info_cache fcc;
+
+			if (options || flags) {
+				zval_ptr_dtor(&descriptor);
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" callback must not contain \"options\" or \"flags\"", ZSTR_VAL(field_name));
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " callback must not contain \"options\" or \"flags\"", field_index);
+				}
+				RETURN_THROWS();
+			}
+			if (!zend_is_callable_ex(callback, NULL, IS_CALLABLE_SUPPRESS_DEPRECATIONS, NULL, &fcc, NULL)) {
+				zval_ptr_dtor(&descriptor);
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" callback must be callable", ZSTR_VAL(field_name));
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " callback must be callable", field_index);
+				}
+				RETURN_THROWS();
+			}
+			add_assoc_long(&descriptor, "filter", FILTER_CALLBACK);
+			zval callback_copy;
+			ZVAL_COPY(&callback_copy, callback);
+			add_assoc_zval(&descriptor, "options", &callback_copy);
+		} else {
+			zval *name = validate ? validate : sanitize;
+			const filter_descriptor_name_entry *entries = validate ? filter_descriptor_validate_names : filter_descriptor_sanitize_names;
+			size_t entry_count = validate ? sizeof(filter_descriptor_validate_names) / sizeof(filter_descriptor_name_entry) : sizeof(filter_descriptor_sanitize_names) / sizeof(filter_descriptor_name_entry);
+
+			if (Z_TYPE_P(name) != IS_STRING) {
+				zval_ptr_dtor(&descriptor);
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" %s must be a string", ZSTR_VAL(field_name), validate ? "validate" : "sanitize");
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " %s must be a string", field_index, validate ? "validate" : "sanitize");
+				}
+				RETURN_THROWS();
+			}
+			if (!php_filter_descriptor_name_to_filter(Z_STR_P(name), entries, entry_count, &filter)) {
+				zval_ptr_dtor(&descriptor);
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" has an unknown %s filter", ZSTR_VAL(field_name), validate ? "validate" : "sanitize");
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " has an unknown %s filter", field_index, validate ? "validate" : "sanitize");
+				}
+				RETURN_THROWS();
+			}
+			if (options && Z_TYPE_P(options) != IS_ARRAY) {
+				zval_ptr_dtor(&descriptor);
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" options must be an array", ZSTR_VAL(field_name));
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " options must be an array", field_index);
+				}
+				RETURN_THROWS();
+			}
+			if (flags && Z_TYPE_P(flags) != IS_LONG) {
+				zval_ptr_dtor(&descriptor);
+				if (field_name) {
+					zend_value_error("filter_descriptors(): Field \"%s\" flags must be an int", ZSTR_VAL(field_name));
+				} else {
+					zend_value_error("filter_descriptors(): Field " ZEND_ULONG_FMT " flags must be an int", field_index);
+				}
+				RETURN_THROWS();
+			}
+			add_assoc_long(&descriptor, "filter", filter);
+			if (options) {
+				zval options_copy;
+				ZVAL_COPY(&options_copy, options);
+				add_assoc_zval(&descriptor, "options", &options_copy);
+			}
+			if (flags) {
+				zval flags_copy;
+				ZVAL_COPY(&flags_copy, flags);
+				add_assoc_zval(&descriptor, "flags", &flags_copy);
+			}
+		}
+
+		if (field_name) {
+			zend_hash_update(Z_ARRVAL_P(return_value), field_name, &descriptor);
+		} else {
+			zend_hash_index_update(Z_ARRVAL_P(return_value), field_index, &descriptor);
+		}
+	} ZEND_HASH_FOREACH_END();
 }
 /* }}} */
 
